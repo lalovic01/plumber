@@ -712,6 +712,110 @@ function addPassiveScrollStyle() {
   // all scroll listeners above already use { passive: true } where applicable.
 }
 
+/* ── 20. Scroll Progress Bar ─────────────────────────────────── */
+function initScrollProgress() {
+  const bar = qs('#scrollProgress');
+  if (!bar) return;
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const docH    = document.documentElement.scrollHeight - window.innerHeight;
+        const percent = docH > 0 ? (window.scrollY / docH) * 100 : 0;
+        bar.style.width = percent + '%';
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+}
+
+/* ── 21. Hero Parallax on mouse move ────────────────────────── */
+function initHeroParallax() {
+  if (prefersReducedMotion()) return;
+
+  const hero    = qs('.hero');
+  const bubbles = qsa('.hero__bubble');
+  if (!hero || !bubbles.length) return;
+
+  hero.addEventListener('mousemove', e => {
+    const rect = hero.getBoundingClientRect();
+    const cx   = (e.clientX - rect.left) / rect.width  - 0.5;  // -0.5 to 0.5
+    const cy   = (e.clientY - rect.top)  / rect.height - 0.5;
+
+    bubbles.forEach((bubble, i) => {
+      const depth = (i + 1) * 10;
+      bubble.style.transform = `translate(${cx * depth}px, ${cy * depth}px)`;
+    });
+  });
+
+  hero.addEventListener('mouseleave', () => {
+    bubbles.forEach(bubble => {
+      bubble.style.transform = '';
+      bubble.style.transition = 'transform .8s cubic-bezier(.22,1,.36,1)';
+    });
+    setTimeout(() => {
+      bubbles.forEach(b => b.style.transition = '');
+    }, 800);
+  });
+}
+
+/* ── 22. Service card 3D tilt on hover (desktop) ─────────────── */
+function initCardTilt() {
+  if (prefersReducedMotion()) return;
+  if (window.matchMedia('(hover: none)').matches) return; // skip touch devices
+
+  const cards = qsa('.service-card');
+
+  cards.forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const rect  = card.getBoundingClientRect();
+      const x     = (e.clientX - rect.left) / rect.width  - 0.5;
+      const y     = (e.clientY - rect.top)  / rect.height - 0.5;
+      const tiltX = +(y * -6).toFixed(2);
+      const tiltY = +(x *  6).toFixed(2);
+
+      card.style.transform = `translateY(-5px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+      card.style.transition = 'transform .1s ease';
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transform  = '';
+      card.style.transition = 'transform .4s cubic-bezier(.22,1,.36,1), box-shadow .42s cubic-bezier(.22,1,.36,1), border-color .42s';
+    });
+  });
+}
+
+/* ── 23. Why card counter badge on hover ─────────────────────── */
+function initWhyCardHover() {
+  if (prefersReducedMotion()) return;
+
+  qsa('.why-card').forEach(card => {
+    const num = card.querySelector('.why-card__num');
+    if (!num) return;
+
+    card.addEventListener('mouseenter', () => {
+      num.style.color    = 'rgba(255,255,255,.09)';
+      num.style.fontSize = '3.4rem';
+      num.style.transition = 'font-size .3s cubic-bezier(.34,1.56,.64,1), color .3s';
+    });
+    card.addEventListener('mouseleave', () => {
+      num.style.fontSize = '';
+      num.style.color    = '';
+    });
+  });
+}
+
+/* ── 24. Stat suffix display (+ or %) ───────────────────────── */
+function patchStatSuffixes() {
+  const map = { 197: '+', 15: '+', 98: '%', 60: '' };
+  qsa('.stat__num[data-target]').forEach(el => {
+    const t = parseInt(el.dataset.target, 10);
+    if (map[t] !== undefined) el.dataset.suffix = map[t];
+  });
+}
+
 /* ── Init ─────────────────────────────────────────────────────── */
 onReady(() => {
   ensureFontLoad();
@@ -726,6 +830,9 @@ onReady(() => {
   initActiveNavLink();
   initLogoScrollTop();
 
+  // Progress bar (always on)
+  initScrollProgress();
+
   // Animations
   if (!prefersReducedMotion()) {
     initScrollAnimations();
@@ -733,6 +840,9 @@ onReady(() => {
     initServiceCardReveal();
     initTestimonialReveal();
     initButtonRipple();
+    initHeroParallax();
+    initCardTilt();
+    initWhyCardHover();
   } else {
     // Immediately show all animated elements for reduced-motion users
     qsa('[data-animate="fade-up"], .why-card, .service-card, .process-step, .testimonial-card')
@@ -744,6 +854,7 @@ onReady(() => {
   }
 
   // Counter
+  patchStatSuffixes();
   initCounters();
 
   // Form
