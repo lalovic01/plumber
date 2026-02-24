@@ -816,13 +816,151 @@ function patchStatSuffixes() {
   });
 }
 
+/* ── 25. Section headers reveal ─────────────────────────────── */
+function initSectionHeaderReveal() {
+  if (prefersReducedMotion()) return;
+  const headers = qsa('.section-header');
+  if (!headers.length || !('IntersectionObserver' in window)) return;
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.2 }
+  );
+  headers.forEach(h => observer.observe(h));
+}
+
+/* ── 26. Hero title word-by-word reveal ─────────────────────── */
+function initHeroTitleReveal() {
+  if (prefersReducedMotion()) return;
+
+  const title = qs('.hero__title');
+  if (!title) return;
+
+  // Wrap each word (preserving <br> and <span> structure)
+  title.childNodes.forEach(node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const words = node.textContent.split(/(\s+)/);
+      const frag = document.createDocumentFragment();
+      words.forEach(word => {
+        if (word.trim()) {
+          const span = document.createElement('span');
+          span.className = 'hero__title-word';
+          span.textContent = word;
+          frag.appendChild(span);
+        } else if (word) {
+          frag.appendChild(document.createTextNode(word));
+        }
+      });
+      node.replaceWith(frag);
+    }
+  });
+
+  // Stagger delay for each word span
+  qsa('.hero__title-word', title).forEach((word, i) => {
+    word.style.animationDelay = `${.12 + i * .08}s`;
+  });
+}
+
+/* ── 27. Testimonial alternate slide-in ─────────────────────── */
+function initTestimonialSlide() {
+  if (prefersReducedMotion()) return;
+
+  const cards = qsa('.testimonial-card');
+  if (!cards.length || !('IntersectionObserver' in window)) return;
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1 }
+  );
+  cards.forEach(c => observer.observe(c));
+}
+
+/* ── 28. Process connector line draw ────────────────────────── */
+function initConnectorDraw() {
+  if (prefersReducedMotion()) return;
+  if (!window.matchMedia('(min-width: 800px)').matches) return;
+
+  const connectors = qsa('.process-step__connector');
+  if (!connectors.length || !('IntersectionObserver' in window)) return;
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.closest('.process-step').classList.add('is-connector-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.5 }
+  );
+  connectors.forEach(c => observer.observe(c));
+}
+
+/* ── 29. Area list reveal ────────────────────────────────────── */
+function initAreaListReveal() {
+  if (prefersReducedMotion()) return;
+
+  const list = qs('.area__list');
+  if (!list || !('IntersectionObserver' in window)) return;
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        list.classList.add('is-visible');
+        observer.unobserve(list);
+      }
+    },
+    { threshold: 0.3 }
+  );
+  observer.observe(list);
+}
+
+/* ── 30. Service card overlay inject ────────────────────────── */
+function initServiceCardOverlay() {
+  qsa('.service-card').forEach(card => {
+    if (!card.querySelector('.service-card__overlay')) {
+      const overlay = document.createElement('div');
+      overlay.className = 'service-card__overlay';
+      card.prepend(overlay);
+    }
+  });
+}
+
+/* ── 31. Submit button loading class ────────────────────────── */
+function patchFormSubmitButton() {
+  const form      = qs('#contactForm');
+  const submitBtn = qs('#formSubmit');
+  if (!form || !submitBtn) return;
+
+  const origSubmit = form.onsubmit;
+  form.addEventListener('submit', () => {
+    // Add spinner class — removed when reset in initContactForm timeout
+    setTimeout(() => submitBtn.classList.add('btn--submitting'), 0);
+    setTimeout(() => submitBtn.classList.remove('btn--submitting'), 900);
+  });
+}
+
 /* ── Init ─────────────────────────────────────────────────────── */
 onReady(() => {
   ensureFontLoad();
   initViewportHeightFix();
   injectActiveLinkStyle();
 
-  // Navigation & scroll
   initBurgerMenu();
   initHeaderScroll();
   initStickyCta();
@@ -830,10 +968,8 @@ onReady(() => {
   initActiveNavLink();
   initLogoScrollTop();
 
-  // Progress bar (always on)
   initScrollProgress();
 
-  // Animations
   if (!prefersReducedMotion()) {
     initScrollAnimations();
     initProcessReveal();
@@ -843,6 +979,12 @@ onReady(() => {
     initHeroParallax();
     initCardTilt();
     initWhyCardHover();
+    // ── nove animacije ──
+    initHeroTitleReveal();
+    initSectionHeaderReveal();
+    initTestimonialSlide();
+    initConnectorDraw();
+    initAreaListReveal();
   } else {
     // Immediately show all animated elements for reduced-motion users
     qsa('[data-animate="fade-up"], .why-card, .service-card, .process-step, .testimonial-card')
@@ -851,15 +993,26 @@ onReady(() => {
         el.style.transform = 'none';
         el.classList.add('is-visible');
       });
+    // pokazati section headere i za reduced-motion korisnike
+    qsa('.section-header').forEach(h => h.classList.add('is-visible'));
   }
 
-  // Counter
   patchStatSuffixes();
   initCounters();
-
-  // Form
   initContactForm();
-
-  // Mobile UX
   initPhoneCopy();
+  initServiceCardOverlay();
+  patchFormSubmitButton();
 });
+
+// New animations
+if (!prefersReducedMotion()) {
+  initHeroTitleReveal();
+  initSectionHeaderReveal();
+  initTestimonialSlide();
+  initConnectorDraw();
+  initAreaListReveal();
+}
+
+initServiceCardOverlay();
+patchFormSubmitButton();
