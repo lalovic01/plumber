@@ -249,7 +249,6 @@ input, textarea, select { font-family: inherit; }
   box-sizing: border-box;
   z-index: 200;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   background: var(--c-900);
   border-top: 1px solid rgba(255,255,255,.1);
   box-shadow: 0 -4px 24px rgba(3,4,94,.3);
